@@ -1,0 +1,22 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+
+# Secrets
+.env
+
+# Local data (keep folder with .keep)
+data/raw/*
+!data/raw/.keep
+
+# OS
+.DS_Store
+Thumbs.db

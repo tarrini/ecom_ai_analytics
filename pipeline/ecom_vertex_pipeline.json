@@ -1,0 +1,536 @@
+{
+  "components": {
+    "comp-drift-registry-vertex-component": {
+      "executorLabel": "exec-drift-registry-vertex-component",
+      "inputDefinitions": {
+        "artifacts": {
+          "delay_metric_in": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "delay_model_in": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "forecast_metric_in": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "forecast_model_in": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "project_id": {
+            "parameterType": "STRING"
+          },
+          "region": {
+            "parameterType": "STRING"
+          },
+          "snowflake_account": {
+            "parameterType": "STRING"
+          },
+          "snowflake_database": {
+            "parameterType": "STRING"
+          },
+          "snowflake_password": {
+            "parameterType": "STRING"
+          },
+          "snowflake_role": {
+            "parameterType": "STRING"
+          },
+          "snowflake_schema": {
+            "parameterType": "STRING"
+          },
+          "snowflake_user": {
+            "parameterType": "STRING"
+          },
+          "snowflake_warehouse": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-llm-daily-brief-op": {
+      "executorLabel": "exec-llm-daily-brief-op",
+      "inputDefinitions": {
+        "parameters": {
+          "openai_api_key": {
+            "parameterType": "STRING"
+          },
+          "openai_model": {
+            "defaultValue": "gpt-4o-mini",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "snowflake_account": {
+            "parameterType": "STRING"
+          },
+          "snowflake_database": {
+            "parameterType": "STRING"
+          },
+          "snowflake_password": {
+            "parameterType": "STRING"
+          },
+          "snowflake_role": {
+            "parameterType": "STRING"
+          },
+          "snowflake_schema": {
+            "parameterType": "STRING"
+          },
+          "snowflake_user": {
+            "parameterType": "STRING"
+          },
+          "snowflake_warehouse": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-train-delay-vertex-component": {
+      "executorLabel": "exec-train-delay-vertex-component",
+      "inputDefinitions": {
+        "parameters": {
+          "project_id": {
+            "parameterType": "STRING"
+          },
+          "region": {
+            "parameterType": "STRING"
+          },
+          "snowflake_account": {
+            "parameterType": "STRING"
+          },
+          "snowflake_database": {
+            "parameterType": "STRING"
+          },
+          "snowflake_password": {
+            "parameterType": "STRING"
+          },
+          "snowflake_role": {
+            "parameterType": "STRING"
+          },
+          "snowflake_schema": {
+            "parameterType": "STRING"
+          },
+          "snowflake_user": {
+            "parameterType": "STRING"
+          },
+          "snowflake_warehouse": {
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "delay_metric_path": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "delay_model_resource_path": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    },
+    "comp-train-forecast-vertex-component": {
+      "executorLabel": "exec-train-forecast-vertex-component",
+      "inputDefinitions": {
+        "parameters": {
+          "project_id": {
+            "parameterType": "STRING"
+          },
+          "region": {
+            "parameterType": "STRING"
+          },
+          "snowflake_account": {
+            "parameterType": "STRING"
+          },
+          "snowflake_database": {
+            "parameterType": "STRING"
+          },
+          "snowflake_password": {
+            "parameterType": "STRING"
+          },
+          "snowflake_role": {
+            "parameterType": "STRING"
+          },
+          "snowflake_schema": {
+            "parameterType": "STRING"
+          },
+          "snowflake_user": {
+            "parameterType": "STRING"
+          },
+          "snowflake_warehouse": {
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "forecast_metric_path": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "forecast_model_resource_path": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    }
+  },
+  "deploymentSpec": {
+    "executors": {
+      "exec-drift-registry-vertex-component": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "drift_registry_vertex_component"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==2.2.3' 'numpy==2.1.3' 'snowflake-connector-python==4.4.0'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef drift_registry_vertex_component(\n    project_id: str,\n    region: str,\n    snowflake_account: str,\n    snowflake_user: str,\n    snowflake_password: str,\n    snowflake_warehouse: str,\n    snowflake_database: str,\n    snowflake_schema: str,\n    snowflake_role: str,\n    forecast_model_in: dsl.InputPath(),\n    forecast_metric_in: dsl.InputPath(),\n    delay_model_in: dsl.InputPath(),\n    delay_metric_in: dsl.InputPath(),\n) -> None:\n    _ = project_id, region\n\n    import numpy as np\n    import snowflake.connector\n\n    def read_text(path: str) -> str:\n        with open(path, encoding=\"utf-8\") as fh:\n            return fh.read().strip()\n\n    forecast_model_resource = read_text(forecast_model_in)\n    delay_model_resource = read_text(delay_model_in)\n    forecast_metric_value_f = float(read_text(forecast_metric_in))\n    delay_metric_value_f = float(read_text(delay_metric_in))\n\n    def psi(expected, actual, bins=10):\n        expected = np.asarray(expected, dtype=float)\n        actual = np.asarray(actual, dtype=float)\n        eps = 1e-6\n        quantiles = np.linspace(0, 1, bins + 1)\n        cuts = np.quantile(expected, quantiles)\n        cuts = np.unique(cuts)\n        if len(cuts) < 3:\n            return 0.0\n        e_hist, _ = np.histogram(expected, bins=cuts)\n        a_hist, _ = np.histogram(actual, bins=cuts)\n        e_dist = np.clip(e_hist / max(e_hist.sum(), 1), eps, None)\n        a_dist = np.clip(a_hist / max(a_hist.sum(), 1), eps, None)\n        return float(np.sum((a_dist - e_dist) * np.log(a_dist / e_dist)))\n\n    conn = snowflake.connector.connect(\n        account=snowflake_account,\n        user=snowflake_user,\n        password=snowflake_password,\n        warehouse=snowflake_warehouse,\n        database=snowflake_database,\n        schema=snowflake_schema,\n        role=snowflake_role or None,\n    )\n    cur = conn.cursor()\n\n    cur.execute(\n        \"SELECT payment_value FROM ECOM_ANALYTICS.FEATURES.DRIFT_BASELINE_SAMPLE LIMIT 100000\"\n    )\n    baseline = cur.fetch_pandas_all().iloc[:, 0].dropna().values\n    cur.execute(\n        \"SELECT payment_value FROM ECOM_ANALYTICS.FEATURES.DRIFT_CURRENT_SAMPLE LIMIT 100000\"\n    )\n    current = cur.fetch_pandas_all().iloc[:, 0].dropna().values\n    drift_score = psi(baseline, current) if len(baseline) and len(current) else 0.0\n    drift_flag = drift_score >= 0.25\n\n    cur.execute(\n        \"\"\"\n        SELECT model_resource_name, metric_value\n        FROM ECOM_ANALYTICS.MART.MODEL_REGISTRY\n        WHERE model_type='forecast' AND is_champion=TRUE\n        ORDER BY updated_at DESC\n        LIMIT 1\n        \"\"\"\n    )\n    old_forecast = cur.fetchone()\n    old_forecast_model = old_forecast[0] if old_forecast else None\n    old_forecast_metric = float(old_forecast[1]) if old_forecast else 9999.0\n    forecast_is_better = forecast_metric_value_f < old_forecast_metric\n\n    cur.execute(\n        \"\"\"\n        SELECT model_resource_name, metric_value\n        FROM ECOM_ANALYTICS.MART.MODEL_REGISTRY\n        WHERE model_type='delay_risk' AND is_champion=TRUE\n        ORDER BY updated_at DESC\n        LIMIT 1\n        \"\"\"\n    )\n    old_delay = cur.fetchone()\n    old_delay_model = old_delay[0] if old_delay else None\n    old_delay_metric = float(old_delay[1]) if old_delay else -1.0\n    delay_is_better = delay_metric_value_f > old_delay_metric\n\n    forecast_champion = old_forecast_model or forecast_model_resource\n    delay_champion = old_delay_model or delay_model_resource\n\n    if not drift_flag and forecast_is_better:\n        cur.execute(\n            \"UPDATE ECOM_ANALYTICS.MART.MODEL_REGISTRY SET is_champion=FALSE WHERE model_type='forecast' AND is_champion=TRUE\"\n        )\n        cur.execute(\n            \"\"\"\n            INSERT INTO ECOM_ANALYTICS.MART.MODEL_REGISTRY\n            (model_type, model_resource_name, metric_name, metric_value, is_champion, drift_score, updated_at)\n            VALUES ('forecast', %s, 'MAPE', %s, TRUE, %s, CURRENT_TIMESTAMP())\n            \"\"\",\n            (forecast_model_resource, forecast_metric_value_f, drift_score),\n        )\n        forecast_champion = forecast_model_resource\n\n    if not drift_flag and delay_is_better:\n        cur.execute(\n            \"UPDATE ECOM_ANALYTICS.MART.MODEL_REGISTRY SET is_champion=FALSE WHERE model_type='delay_risk' AND is_champion=TRUE\"\n        )\n        cur.execute(\n            \"\"\"\n            INSERT INTO ECOM_ANALYTICS.MART.MODEL_REGISTRY\n            (model_type, model_resource_name, metric_name, metric_value, is_champion, drift_score, updated_at)\n            VALUES ('delay_risk', %s, 'ROC_AUC', %s, TRUE, %s, CURRENT_TIMESTAMP())\n            \"\"\",\n            (delay_model_resource, delay_metric_value_f, drift_score),\n        )\n        delay_champion = delay_model_resource\n\n    cur.execute(\n        \"\"\"\n        INSERT INTO ECOM_ANALYTICS.MART.DRIFT_AUDIT\n        (run_ts, feature_name, psi_score, drift_flag)\n        VALUES (CURRENT_TIMESTAMP(), 'payment_value', %s, %s)\n        \"\"\",\n        (drift_score, drift_flag),\n    )\n\n    conn.commit()\n    cur.close()\n    conn.close()\n\n"
+          ],
+          "image": "python:3.11"
+        }
+      },
+      "exec-llm-daily-brief-op": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "llm_daily_brief_op"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'snowflake-connector-python==4.4.0' 'openai==2.32.0'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef llm_daily_brief_op(\n    snowflake_account: str,\n    snowflake_user: str,\n    snowflake_password: str,\n    snowflake_warehouse: str,\n    snowflake_database: str,\n    snowflake_schema: str,\n    snowflake_role: str,\n    openai_api_key: str,\n    openai_model: str = \"gpt-4o-mini\",\n) -> None:\n    import json\n    import snowflake.connector\n    from openai import OpenAI\n\n    conn = snowflake.connector.connect(\n        account=snowflake_account,\n        user=snowflake_user,\n        password=snowflake_password,\n        warehouse=snowflake_warehouse,\n        database=snowflake_database,\n        schema=snowflake_schema,\n        role=snowflake_role,\n    )\n    cur = conn.cursor()\n\n    cur.execute(\"\"\"\n        WITH d AS (\n          SELECT kpi_date, total_orders, gmv, aov, avg_review_score, delayed_order_pct,\n                 ROW_NUMBER() OVER (ORDER BY kpi_date DESC) rn\n          FROM ECOM_ANALYTICS.MART.DAILY_KPI\n        )\n        SELECT\n          d1.kpi_date,\n          d1.total_orders, d2.total_orders,\n          d1.gmv, d2.gmv,\n          d1.aov, d2.aov,\n          d1.avg_review_score, d2.avg_review_score,\n          d1.delayed_order_pct, d2.delayed_order_pct\n        FROM d d1 LEFT JOIN d d2 ON d2.rn=2\n        WHERE d1.rn=1\n    \"\"\")\n    row = cur.fetchone()\n\n    payload = {\n        \"kpi_date\": str(row[0]),\n        \"orders_latest\": float(row[1] or 0),\n        \"orders_prev\": float(row[2] or 0),\n        \"gmv_latest\": float(row[3] or 0),\n        \"gmv_prev\": float(row[4] or 0),\n        \"aov_latest\": float(row[5] or 0),\n        \"aov_prev\": float(row[6] or 0),\n        \"review_latest\": float(row[7] or 0),\n        \"review_prev\": float(row[8] or 0),\n        \"delay_latest\": float(row[9] or 0),\n        \"delay_prev\": float(row[10] or 0),\n    }\n\n    system_prompt = \"\"\"\nYou are a senior e-commerce analytics consultant.\nRules:\n1) Use ONLY provided KPI data. No fabricated numbers.\n2) Be concise, business-safe, non-alarming.\n3) Mention positive changes, negative changes, and 3 actions.\n4) If data is insufficient, explicitly say so.\n5) Avoid legal, medical, financial compliance advice.\nOutput sections:\n- Performance Snapshot\n- What Improved\n- What Needs Attention\n- Recommended Actions (3 bullets)\n\"\"\"\n\n    user_prompt = f\"KPI JSON:\\n{json.dumps(payload, indent=2)}\"\n\n    client = OpenAI(api_key=openai_api_key)\n    response = client.responses.create(\n        model=openai_model,\n        input=[\n            {\"role\": \"system\", \"content\": system_prompt},\n            {\"role\": \"user\", \"content\": user_prompt},\n        ],\n        temperature=0.2,\n    )\n    summary = response.output_text.strip()\n\n    cur.execute(\n        \"\"\"\n        INSERT INTO ECOM_ANALYTICS.MART.CLIENT_DAILY_BRIEF\n        (brief_date, generated_at, kpi_json, ai_summary, channel, run_id)\n        SELECT CURRENT_DATE(), CURRENT_TIMESTAMP(), PARSE_JSON(%s), %s, 'email_slack', UUID_STRING()\n        \"\"\",\n        (json.dumps(payload), summary),\n    )\n    conn.commit()\n    cur.close()\n    conn.close()\n\n"
+          ],
+          "image": "python:3.11"
+        }
+      },
+      "exec-train-delay-vertex-component": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "train_delay_vertex_component"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==2.2.3' 'numpy==2.1.3' 'snowflake-connector-python==4.4.0' 'google-cloud-aiplatform>=1.38.0' 'scikit-learn==1.5.2' 'xgboost==2.1.1' 'joblib==1.4.2'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef train_delay_vertex_component(\n    project_id: str,\n    region: str,\n    snowflake_account: str,\n    snowflake_user: str,\n    snowflake_password: str,\n    snowflake_warehouse: str,\n    snowflake_database: str,\n    snowflake_schema: str,\n    snowflake_role: str,\n    delay_model_resource_path: dsl.OutputPath(),\n    delay_metric_path: dsl.OutputPath(),\n) -> None:\n    import os\n    import tempfile\n\n    import joblib\n    import numpy as np\n    import pandas as pd\n    import snowflake.connector\n    from google.cloud import aiplatform\n    from sklearn.metrics import roc_auc_score\n    from sklearn.model_selection import StratifiedKFold\n    from xgboost import XGBClassifier\n\n    conn = snowflake.connector.connect(\n        account=snowflake_account,\n        user=snowflake_user,\n        password=snowflake_password,\n        warehouse=snowflake_warehouse,\n        database=snowflake_database,\n        schema=snowflake_schema,\n        role=snowflake_role or None,\n    )\n    cur = conn.cursor()\n    cur.execute(\"SELECT * FROM ECOM_ANALYTICS.FEATURES.FCT_DELAY_FEATURES_TRAIN\")\n    df = cur.fetch_pandas_all()\n    cur.close()\n    conn.close()\n\n    if df.empty:\n        raise RuntimeError(\"No training rows in FEATURES.FCT_DELAY_FEATURES_TRAIN\")\n\n    target = \"is_delayed\"\n    cat_cols = [c for c in df.columns if df[c].dtype == \"object\" and c != target]\n    df = pd.get_dummies(df, columns=cat_cols, dummy_na=True)\n    feature_cols = [c for c in df.columns if c not in [target, \"order_id\", \"order_purchase_ts\"]]\n\n    X = df[feature_cols].fillna(0)\n    y = df[target].astype(int)\n\n    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)\n    auc_scores = []\n    best_model = None\n\n    for tr, va in skf.split(X, y):\n        xtr, xva = X.iloc[tr], X.iloc[va]\n        ytr, yva = y.iloc[tr], y.iloc[va]\n        model = XGBClassifier(\n            n_estimators=500,\n            learning_rate=0.05,\n            max_depth=6,\n            subsample=0.9,\n            colsample_bytree=0.9,\n            eval_metric=\"logloss\",\n            random_state=42,\n        )\n        model.fit(xtr, ytr)\n        prob = model.predict_proba(xva)[:, 1]\n        auc = roc_auc_score(yva, prob)\n        auc_scores.append(auc)\n        best_model = model\n\n    metric_value = float(np.mean(auc_scores))\n\n    aiplatform.init(project=project_id, location=region)\n\n    with tempfile.TemporaryDirectory() as td:\n        model_path = os.path.join(td, \"delay_model.joblib\")\n        joblib.dump({\"model\": best_model, \"features\": feature_cols}, model_path)\n\n        uploaded = aiplatform.Model.upload(\n            display_name=\"ecom-delay-risk-model\",\n            artifact_uri=td,\n            serving_container_image_uri=\"us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-5:latest\",\n            labels={\"task\": \"delay_risk\", \"framework\": \"xgboost\"},\n        )\n\n    rid = uploaded.resource_name\n    with open(delay_model_resource_path, \"w\", encoding=\"utf-8\") as f:\n        f.write(rid)\n    with open(delay_metric_path, \"w\", encoding=\"utf-8\") as f:\n        f.write(str(metric_value))\n\n"
+          ],
+          "image": "python:3.11"
+        }
+      },
+      "exec-train-forecast-vertex-component": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "train_forecast_vertex_component"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==2.2.3' 'numpy==2.1.3' 'snowflake-connector-python==4.4.0' 'google-cloud-aiplatform>=1.38.0' 'scikit-learn==1.5.2' 'xgboost==2.1.1' 'joblib==1.4.2'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef train_forecast_vertex_component(\n    project_id: str,\n    region: str,\n    snowflake_account: str,\n    snowflake_user: str,\n    snowflake_password: str,\n    snowflake_warehouse: str,\n    snowflake_database: str,\n    snowflake_schema: str,\n    snowflake_role: str,\n    forecast_model_resource_path: dsl.OutputPath(),\n    forecast_metric_path: dsl.OutputPath(),\n) -> None:\n    import os\n    import tempfile\n\n    import joblib\n    import numpy as np\n    import pandas as pd\n    import snowflake.connector\n    from google.cloud import aiplatform\n    from sklearn.metrics import mean_absolute_percentage_error\n    from sklearn.model_selection import TimeSeriesSplit\n    from xgboost import XGBRegressor\n\n    conn = snowflake.connector.connect(\n        account=snowflake_account,\n        user=snowflake_user,\n        password=snowflake_password,\n        warehouse=snowflake_warehouse,\n        database=snowflake_database,\n        schema=snowflake_schema,\n        role=snowflake_role or None,\n    )\n    cur = conn.cursor()\n    cur.execute(\"SELECT * FROM ECOM_ANALYTICS.FEATURES.FCT_DEMAND_FEATURES_TRAIN\")\n    df = cur.fetch_pandas_all()\n    cur.close()\n    conn.close()\n\n    if df.empty:\n        raise RuntimeError(\"No training rows in FEATURES.FCT_DEMAND_FEATURES_TRAIN\")\n\n    target = \"target_orders_next_7d\"\n    feature_cols = [\n        c\n        for c in df.columns\n        if c not in [\"kpi_date\", \"customer_state\", \"product_category_name\", target]\n    ]\n    df = df.sort_values(\"kpi_date\").dropna(subset=[target])\n\n    X = df[feature_cols].fillna(0)\n    y = df[target].astype(float)\n\n    tscv = TimeSeriesSplit(n_splits=4)\n    scores = []\n    best_model = None\n    for train_idx, val_idx in tscv.split(X):\n        xtr, xva = X.iloc[train_idx], X.iloc[val_idx]\n        ytr, yva = y.iloc[train_idx], y.iloc[val_idx]\n\n        model = XGBRegressor(\n            n_estimators=400,\n            learning_rate=0.05,\n            max_depth=7,\n            subsample=0.9,\n            colsample_bytree=0.9,\n            random_state=42,\n        )\n        model.fit(xtr, ytr)\n        pred = model.predict(xva)\n        mape = mean_absolute_percentage_error(yva, np.maximum(pred, 1e-8))\n        scores.append(mape)\n        best_model = model\n\n    metric_value = float(np.mean(scores))\n\n    aiplatform.init(project=project_id, location=region)\n\n    with tempfile.TemporaryDirectory() as td:\n        model_path = os.path.join(td, \"forecast_model.joblib\")\n        joblib.dump({\"model\": best_model, \"features\": feature_cols}, model_path)\n\n        uploaded = aiplatform.Model.upload(\n            display_name=\"ecom-forecast-model\",\n            artifact_uri=td,\n            serving_container_image_uri=\"us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-5:latest\",\n            labels={\"task\": \"forecast\", \"framework\": \"xgboost\"},\n        )\n\n    rid = uploaded.resource_name\n    with open(forecast_model_resource_path, \"w\", encoding=\"utf-8\") as f:\n        f.write(rid)\n    with open(forecast_metric_path, \"w\", encoding=\"utf-8\") as f:\n        f.write(str(metric_value))\n\n"
+          ],
+          "image": "python:3.11"
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "displayName": "Ecom \u2014 train forecast, delay, drift, daily brief",
+    "name": "ecom-vertex-full"
+  },
+  "root": {
+    "dag": {
+      "tasks": {
+        "drift-registry-vertex-component": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-drift-registry-vertex-component"
+          },
+          "dependentTasks": [
+            "train-delay-vertex-component",
+            "train-forecast-vertex-component"
+          ],
+          "inputs": {
+            "artifacts": {
+              "delay_metric_in": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "delay_metric_path",
+                  "producerTask": "train-delay-vertex-component"
+                }
+              },
+              "delay_model_in": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "delay_model_resource_path",
+                  "producerTask": "train-delay-vertex-component"
+                }
+              },
+              "forecast_metric_in": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "forecast_metric_path",
+                  "producerTask": "train-forecast-vertex-component"
+                }
+              },
+              "forecast_model_in": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "forecast_model_resource_path",
+                  "producerTask": "train-forecast-vertex-component"
+                }
+              }
+            },
+            "parameters": {
+              "project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "region": {
+                "componentInputParameter": "region"
+              },
+              "snowflake_account": {
+                "componentInputParameter": "snowflake_account"
+              },
+              "snowflake_database": {
+                "componentInputParameter": "snowflake_database"
+              },
+              "snowflake_password": {
+                "componentInputParameter": "snowflake_password"
+              },
+              "snowflake_role": {
+                "componentInputParameter": "snowflake_role"
+              },
+              "snowflake_schema": {
+                "componentInputParameter": "snowflake_schema"
+              },
+              "snowflake_user": {
+                "componentInputParameter": "snowflake_user"
+              },
+              "snowflake_warehouse": {
+                "componentInputParameter": "snowflake_warehouse"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "drift-registry-vertex-component"
+          }
+        },
+        "llm-daily-brief-op": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-llm-daily-brief-op"
+          },
+          "dependentTasks": [
+            "drift-registry-vertex-component"
+          ],
+          "inputs": {
+            "parameters": {
+              "openai_api_key": {
+                "componentInputParameter": "openai_api_key"
+              },
+              "openai_model": {
+                "componentInputParameter": "openai_model"
+              },
+              "snowflake_account": {
+                "componentInputParameter": "snowflake_account"
+              },
+              "snowflake_database": {
+                "componentInputParameter": "snowflake_database"
+              },
+              "snowflake_password": {
+                "componentInputParameter": "snowflake_password"
+              },
+              "snowflake_role": {
+                "componentInputParameter": "snowflake_role"
+              },
+              "snowflake_schema": {
+                "componentInputParameter": "snowflake_schema"
+              },
+              "snowflake_user": {
+                "componentInputParameter": "snowflake_user"
+              },
+              "snowflake_warehouse": {
+                "componentInputParameter": "snowflake_warehouse"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "llm-daily-brief-op"
+          }
+        },
+        "train-delay-vertex-component": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-train-delay-vertex-component"
+          },
+          "inputs": {
+            "parameters": {
+              "project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "region": {
+                "componentInputParameter": "region"
+              },
+              "snowflake_account": {
+                "componentInputParameter": "snowflake_account"
+              },
+              "snowflake_database": {
+                "componentInputParameter": "snowflake_database"
+              },
+              "snowflake_password": {
+                "componentInputParameter": "snowflake_password"
+              },
+              "snowflake_role": {
+                "componentInputParameter": "snowflake_role"
+              },
+              "snowflake_schema": {
+                "componentInputParameter": "snowflake_schema"
+              },
+              "snowflake_user": {
+                "componentInputParameter": "snowflake_user"
+              },
+              "snowflake_warehouse": {
+                "componentInputParameter": "snowflake_warehouse"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "train-delay-vertex-component"
+          }
+        },
+        "train-forecast-vertex-component": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-train-forecast-vertex-component"
+          },
+          "inputs": {
+            "parameters": {
+              "project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "region": {
+                "componentInputParameter": "region"
+              },
+              "snowflake_account": {
+                "componentInputParameter": "snowflake_account"
+              },
+              "snowflake_database": {
+                "componentInputParameter": "snowflake_database"
+              },
+              "snowflake_password": {
+                "componentInputParameter": "snowflake_password"
+              },
+              "snowflake_role": {
+                "componentInputParameter": "snowflake_role"
+              },
+              "snowflake_schema": {
+                "componentInputParameter": "snowflake_schema"
+              },
+              "snowflake_user": {
+                "componentInputParameter": "snowflake_user"
+              },
+              "snowflake_warehouse": {
+                "componentInputParameter": "snowflake_warehouse"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "train-forecast-vertex-component"
+          }
+        }
+      }
+    },
+    "inputDefinitions": {
+      "parameters": {
+        "openai_api_key": {
+          "parameterType": "STRING"
+        },
+        "openai_model": {
+          "defaultValue": "gpt-4o-mini",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "project_id": {
+          "parameterType": "STRING"
+        },
+        "region": {
+          "parameterType": "STRING"
+        },
+        "snowflake_account": {
+          "parameterType": "STRING"
+        },
+        "snowflake_database": {
+          "parameterType": "STRING"
+        },
+        "snowflake_password": {
+          "parameterType": "STRING"
+        },
+        "snowflake_role": {
+          "parameterType": "STRING"
+        },
+        "snowflake_schema": {
+          "parameterType": "STRING"
+        },
+        "snowflake_user": {
+          "parameterType": "STRING"
+        },
+        "snowflake_warehouse": {
+          "parameterType": "STRING"
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.16.0"
+}

@@ -1,0 +1,151 @@
+{
+  "components": {
+    "comp-llm-daily-brief-op": {
+      "executorLabel": "exec-llm-daily-brief-op",
+      "inputDefinitions": {
+        "parameters": {
+          "openai_api_key": {
+            "parameterType": "STRING"
+          },
+          "openai_model": {
+            "defaultValue": "gpt-4o-mini",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "snowflake_account": {
+            "parameterType": "STRING"
+          },
+          "snowflake_database": {
+            "parameterType": "STRING"
+          },
+          "snowflake_password": {
+            "parameterType": "STRING"
+          },
+          "snowflake_role": {
+            "parameterType": "STRING"
+          },
+          "snowflake_schema": {
+            "parameterType": "STRING"
+          },
+          "snowflake_user": {
+            "parameterType": "STRING"
+          },
+          "snowflake_warehouse": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    }
+  },
+  "deploymentSpec": {
+    "executors": {
+      "exec-llm-daily-brief-op": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "llm_daily_brief_op"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'snowflake-connector-python==4.4.0' 'openai==2.32.0'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef llm_daily_brief_op(\n    snowflake_account: str,\n    snowflake_user: str,\n    snowflake_password: str,\n    snowflake_warehouse: str,\n    snowflake_database: str,\n    snowflake_schema: str,\n    snowflake_role: str,\n    openai_api_key: str,\n    openai_model: str = \"gpt-4o-mini\",\n) -> None:\n    import json\n    import snowflake.connector\n    from openai import OpenAI\n\n    conn = snowflake.connector.connect(\n        account=snowflake_account,\n        user=snowflake_user,\n        password=snowflake_password,\n        warehouse=snowflake_warehouse,\n        database=snowflake_database,\n        schema=snowflake_schema,\n        role=snowflake_role,\n    )\n    cur = conn.cursor()\n\n    cur.execute(\"\"\"\n        WITH d AS (\n          SELECT kpi_date, total_orders, gmv, aov, avg_review_score, delayed_order_pct,\n                 ROW_NUMBER() OVER (ORDER BY kpi_date DESC) rn\n          FROM ECOM_ANALYTICS.MART.DAILY_KPI\n        )\n        SELECT\n          d1.kpi_date,\n          d1.total_orders, d2.total_orders,\n          d1.gmv, d2.gmv,\n          d1.aov, d2.aov,\n          d1.avg_review_score, d2.avg_review_score,\n          d1.delayed_order_pct, d2.delayed_order_pct\n        FROM d d1 LEFT JOIN d d2 ON d2.rn=2\n        WHERE d1.rn=1\n    \"\"\")\n    row = cur.fetchone()\n\n    payload = {\n        \"kpi_date\": str(row[0]),\n        \"orders_latest\": float(row[1] or 0),\n        \"orders_prev\": float(row[2] or 0),\n        \"gmv_latest\": float(row[3] or 0),\n        \"gmv_prev\": float(row[4] or 0),\n        \"aov_latest\": float(row[5] or 0),\n        \"aov_prev\": float(row[6] or 0),\n        \"review_latest\": float(row[7] or 0),\n        \"review_prev\": float(row[8] or 0),\n        \"delay_latest\": float(row[9] or 0),\n        \"delay_prev\": float(row[10] or 0),\n    }\n\n    system_prompt = \"\"\"\nYou are a senior e-commerce analytics consultant.\nRules:\n1) Use ONLY provided KPI data. No fabricated numbers.\n2) Be concise, business-safe, non-alarming.\n3) Mention positive changes, negative changes, and 3 actions.\n4) If data is insufficient, explicitly say so.\n5) Avoid legal, medical, financial compliance advice.\nOutput sections:\n- Performance Snapshot\n- What Improved\n- What Needs Attention\n- Recommended Actions (3 bullets)\n\"\"\"\n\n    user_prompt = f\"KPI JSON:\\n{json.dumps(payload, indent=2)}\"\n\n    client = OpenAI(api_key=openai_api_key)\n    response = client.responses.create(\n        model=openai_model,\n        input=[\n            {\"role\": \"system\", \"content\": system_prompt},\n            {\"role\": \"user\", \"content\": user_prompt},\n        ],\n        temperature=0.2,\n    )\n    summary = response.output_text.strip()\n\n    cur.execute(\n        \"\"\"\n        INSERT INTO ECOM_ANALYTICS.MART.CLIENT_DAILY_BRIEF\n        (brief_date, generated_at, kpi_json, ai_summary, channel, run_id)\n        SELECT CURRENT_DATE(), CURRENT_TIMESTAMP(), PARSE_JSON(%s), %s, 'email_slack', UUID_STRING()\n        \"\"\",\n        (json.dumps(payload), summary),\n    )\n    conn.commit()\n    cur.close()\n    conn.close()\n\n"
+          ],
+          "image": "python:3.11"
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "displayName": "Ecom \u2014 daily KPI brief (OpenAI) only",
+    "name": "ecom-llm-brief-only"
+  },
+  "root": {
+    "dag": {
+      "tasks": {
+        "llm-daily-brief-op": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-llm-daily-brief-op"
+          },
+          "inputs": {
+            "parameters": {
+              "openai_api_key": {
+                "componentInputParameter": "openai_api_key"
+              },
+              "openai_model": {
+                "componentInputParameter": "openai_model"
+              },
+              "snowflake_account": {
+                "componentInputParameter": "snowflake_account"
+              },
+              "snowflake_database": {
+                "componentInputParameter": "snowflake_database"
+              },
+              "snowflake_password": {
+                "componentInputParameter": "snowflake_password"
+              },
+              "snowflake_role": {
+                "componentInputParameter": "snowflake_role"
+              },
+              "snowflake_schema": {
+                "componentInputParameter": "snowflake_schema"
+              },
+              "snowflake_user": {
+                "componentInputParameter": "snowflake_user"
+              },
+              "snowflake_warehouse": {
+                "componentInputParameter": "snowflake_warehouse"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "llm-daily-brief-op"
+          }
+        }
+      }
+    },
+    "inputDefinitions": {
+      "parameters": {
+        "openai_api_key": {
+          "parameterType": "STRING"
+        },
+        "openai_model": {
+          "defaultValue": "gpt-4o-mini",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "snowflake_account": {
+          "parameterType": "STRING"
+        },
+        "snowflake_database": {
+          "parameterType": "STRING"
+        },
+        "snowflake_password": {
+          "parameterType": "STRING"
+        },
+        "snowflake_role": {
+          "parameterType": "STRING"
+        },
+        "snowflake_schema": {
+          "parameterType": "STRING"
+        },
+        "snowflake_user": {
+          "parameterType": "STRING"
+        },
+        "snowflake_warehouse": {
+          "parameterType": "STRING"
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.16.0"
+}
