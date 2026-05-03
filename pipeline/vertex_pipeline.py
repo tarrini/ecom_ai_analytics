@@ -45,6 +45,7 @@ from pipeline.components.llm_brief_op import llm_daily_brief_op
 def ecom_full_vertex_pipeline(
     project_id: str,
     region: str,
+    vertex_gcs_staging_bucket: str,
     snowflake_account: str,
     snowflake_user: str,
     snowflake_password: str,
@@ -55,9 +56,11 @@ def ecom_full_vertex_pipeline(
     openai_api_key: str,
     openai_model: str = "gpt-4o-mini",
 ):
+   
     fc = train_forecast_vertex_component(
         project_id=project_id,
         region=region,
+        vertex_gcs_staging_bucket=vertex_gcs_staging_bucket,
         snowflake_account=snowflake_account,
         snowflake_user=snowflake_user,
         snowflake_password=snowflake_password,
@@ -65,10 +68,11 @@ def ecom_full_vertex_pipeline(
         snowflake_database=snowflake_database,
         snowflake_schema=snowflake_schema,
         snowflake_role=snowflake_role,
-    )
+    ).set_memory_limit("48G").set_cpu_limit("8")
     dl = train_delay_vertex_component(
         project_id=project_id,
         region=region,
+        vertex_gcs_staging_bucket=vertex_gcs_staging_bucket,
         snowflake_account=snowflake_account,
         snowflake_user=snowflake_user,
         snowflake_password=snowflake_password,
@@ -76,7 +80,7 @@ def ecom_full_vertex_pipeline(
         snowflake_database=snowflake_database,
         snowflake_schema=snowflake_schema,
         snowflake_role=snowflake_role,
-    )
+    ).set_memory_limit("32G").set_cpu_limit("8")
     drift_task = drift_registry_vertex_component(
         project_id=project_id,
         region=region,
@@ -91,7 +95,7 @@ def ecom_full_vertex_pipeline(
         forecast_metric_in=fc.outputs["forecast_metric_path"],
         delay_model_in=dl.outputs["delay_model_resource_path"],
         delay_metric_in=dl.outputs["delay_metric_path"],
-    ).after(fc, dl)
+    ).set_memory_limit("16G").set_cpu_limit("4").after(fc, dl)
 
     llm_daily_brief_op(
         snowflake_account=snowflake_account,
@@ -103,7 +107,7 @@ def ecom_full_vertex_pipeline(
         snowflake_role=snowflake_role,
         openai_api_key=openai_api_key,
         openai_model=openai_model,
-    ).after(drift_task)
+    ).set_memory_limit("16G").set_cpu_limit("4").after(drift_task)
 
 
 @dsl.pipeline(

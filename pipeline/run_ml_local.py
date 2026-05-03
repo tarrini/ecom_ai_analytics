@@ -1,9 +1,12 @@
 
 from __future__ import annotations
-
 import os
 import sys
-
+from pathlib import Path
+_PIPELINE_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _PIPELINE_DIR.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=".env", override=True)

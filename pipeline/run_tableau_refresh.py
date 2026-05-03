@@ -14,6 +14,21 @@ DATASOURCE_ID = os.getenv("TABLEAU_DATASOURCE_ID", "").strip()
 WORKBOOK_ID = os.getenv("TABLEAU_WORKBOOK_ID", "").strip()
 API_VERSION = os.getenv("TABLEAU_API_VERSION", "3.22")
 
+JSON_HEADERS = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+}
+
+
+def _ensure_json_response(response: requests.Response, context: str) -> dict:
+    content_type = response.headers.get("Content-Type", "")
+    if "application/json" not in content_type.lower():
+        raise RuntimeError(
+            f"{context}: expected JSON but got status={response.status_code}, "
+            f"content-type={content_type}, body={response.text[:500]}"
+        )
+    return response.json()
+
 
 def sign_in():
     signin_url = f"{SERVER}/api/{API_VERSION}/auth/signin"
@@ -24,9 +39,9 @@ def sign_in():
             "site": {"contentUrl": SITE},
         }
     }
-    response = requests.post(signin_url, json=payload, timeout=60)
+    response = requests.post(signin_url, json=payload, headers=JSON_HEADERS, timeout=60)
     response.raise_for_status()
-    data = response.json()
+    data = _ensure_json_response(response, "Tableau sign-in failed")
     token = data["credentials"]["token"]
     site_id = data["credentials"]["site"]["id"]
     return token, site_id
@@ -34,30 +49,37 @@ def sign_in():
 
 def sign_out(token):
     signout_url = f"{SERVER}/api/{API_VERSION}/auth/signout"
-    requests.post(signout_url, headers={"X-Tableau-Auth": token}, timeout=60)
+    headers = {"X-Tableau-Auth": token, "Accept": "application/json"}
+    requests.post(signout_url, headers=headers, timeout=60)
 
 
 def trigger_datasource_refresh(token, site_id, datasource_id):
     refresh_url = f"{SERVER}/api/{API_VERSION}/sites/{site_id}/datasources/{datasource_id}/refresh"
-    response = requests.post(refresh_url, headers={"X-Tableau-Auth": token}, timeout=60)
+    headers = {"X-Tableau-Auth": token, "Accept": "application/json"}
+    response = requests.post(refresh_url, json={}, headers=headers, timeout=60)
     response.raise_for_status()
-    return response.json()["job"]["id"]
+    data = _ensure_json_response(response, "Datasource refresh trigger failed")
+    return data["job"]["id"]
 
 
 def trigger_workbook_refresh(token, site_id, workbook_id):
     refresh_url = f"{SERVER}/api/{API_VERSION}/sites/{site_id}/workbooks/{workbook_id}/refresh"
-    response = requests.post(refresh_url, headers={"X-Tableau-Auth": token}, timeout=60)
+    headers = {"X-Tableau-Auth": token, "Accept": "application/json"}
+    response = requests.post(refresh_url, json={}, headers=headers, timeout=60)
     response.raise_for_status()
-    return response.json()["job"]["id"]
+    data = _ensure_json_response(response, "Workbook refresh trigger failed")
+    return data["job"]["id"]
 
 
 def poll_job(token, site_id, job_id, max_wait_sec=1800, interval=15):
     job_url = f"{SERVER}/api/{API_VERSION}/sites/{site_id}/jobs/{job_id}"
+    headers = {"X-Tableau-Auth": token, "Accept": "application/json"}
     waited = 0
     while waited < max_wait_sec:
-        response = requests.get(job_url, headers={"X-Tableau-Auth": token}, timeout=60)
+        response = requests.get(job_url, headers=headers, timeout=60)
         response.raise_for_status()
-        job = response.json()["job"]
+        data = _ensure_json_response(response, "Job poll failed")
+        job = data["job"]
         finish_code = job.get("finishCode")
         progress = job.get("progress", "0")
         print(f"Job {job_id} progress={progress} finishCode={finish_code}")

@@ -78,7 +78,7 @@ Output sections:
 - Performance Snapshot
 - What Improved
 - What Needs Attention
-- Recommended Actions (3 bullets)
+- Recommends)
 """
 
     user_prompt = f"KPI JSON:\n{json.dumps(payload, indent=2)}"

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+!*.example
+data/raw/*.csv
+!data/raw/.keep
+agent-transcripts
+mcps
+*.log
